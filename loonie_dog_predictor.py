@@ -49,7 +49,7 @@ SEASON_WINS = {
 }
 
 # 2026 projection – adjust based on preseason expectations / Vegas O/U
-PROJECTED_2026_WINS = 92   # user notes: "expected to be better" in 2026
+PROJECTED_2026_WINS = 90   # user notes: "expected to be better" in 2026
 
 # ============================================================
 # 2. HISTORICAL GAME DATA
@@ -114,26 +114,30 @@ raw_games = [
     {"date": "2025-04-01", "hot_dogs": 44563,  "attendance": 21845, "game_duration_min": 158},  # HD from DPF(2.04)×att; DPM≈175 (image may show 165 due to resolution)
     {"date": "2025-04-15", "hot_dogs": 55066,  "attendance": 26979, "game_duration_min": 153},
     {"date": "2025-04-29", "hot_dogs": 50953,  "attendance": 28045, "game_duration_min": 149},
-    {"date": "2025-05-13", "hot_dogs": 50521,  "attendance": 27717, "game_duration_min": 179},  # duration estimated
+    {"date": "2025-05-13", "hot_dogs": 50521,  "attendance": 27717, "game_duration_min": 176},
     {"date": "2025-05-20", "hot_dogs": 42362,  "attendance": 23597, "game_duration_min": 135},
-    {"date": "2025-06-03", "hot_dogs": 67702,  "attendance": 32628, "game_duration_min": 163},  # duration estimated
+    {"date": "2025-06-03", "hot_dogs": 67702,  "attendance": 32628, "game_duration_min": 166}, 
     {"date": "2025-06-17", "hot_dogs": 72606,  "attendance": 38537, "game_duration_min": 177},
     {"date": "2025-07-22", "hot_dogs": 84731,  "attendance": 42326, "game_duration_min": 173},
-    {"date": "2025-08-12", "hot_dogs": 94388,  "attendance": 43003, "game_duration_min": None},  # duration unclear from image
+    {"date": "2025-08-12", "hot_dogs": 94388,  "attendance": 43003, "game_duration_min": 163},
     {"date": "2025-08-26", "hot_dogs": 96633,  "attendance": 42235, "game_duration_min": 190},  # single-game record (*)
+    {"date": "2025-09-26", "hot_dogs": 86615,  "attendance": 40252, "game_duration_min": 194},
     {"date": "2025-09-23", "hot_dogs": 92896,  "attendance": 42927, "game_duration_min": 172},  # confirmed post-game stats
 ]
 
-# Confirmed / updated season totals – used for sanity checks and trend analysis.
-# 2025 total reflects all 11 games including confirmed Sept 23 data.
+# Confirmed full-season totals sourced from reference rows in later-year images.
+# ⚠ 2022 raw_games below are INCOMPLETE: dogCount2022 was a mid-season snapshot
+#   (8 games, Apr–Jul only). The confirmed full-season total is 444,854 HD,
+#   as shown in the 2023 and 2024 season sheets. Missing Aug–Sept 2022 game data
+#   is not available; add individual game rows to raw_games if obtained.
 SEASON_TOTALS = {
-    2022: {"hot_dogs": 253134,  "attendance": 216311, "avg_dpf": 1.17, "games": 8},
+    2022: {"hot_dogs": 444854,  "attendance": 377138, "avg_dpf": 1.18, "games": None},  # full-season confirmed; raw_games partial (8 of ~12 games)
     2023: {"hot_dogs": 693870,  "attendance": 399683, "avg_dpf": 1.74, "games": 11},
     2024: {"hot_dogs": 727819,  "attendance": 400940, "avg_dpf": 1.82, "games": 13, "avg_dpm": 214},
-    2025: {"hot_dogs": 752421,  "attendance": 369839, "avg_dpf": 2.03, "games": 11},
-    # 2025 total: 659,525 (Apr 1–Aug 26, 10 games) + 92,896 (Sept 23) = 752,421 HD
-    # 2025 att:   326,912 (Apr 1–Aug 26) + 42,927 (Sept 23) = 369,839
-    # Image subtotal (11-game preliminary): 733,412; Sept 23 corrected to 92,896 post-game.
+    2025: {"hot_dogs": 839036,  "attendance": 410091, "avg_dpf": 2.05, "games": 12},
+    # 2025: 12 confirmed games (Apr 1 – Sept 26)
+    # HD:  659,525 (Apr–Aug) + 86,615 (Sept 26) + 92,896 (Sept 23) = 839,036
+    # Att: 326,912 (Apr–Aug) + 40,252 (Sept 26) + 42,927 (Sept 23) = 410,091
 }
 
 # ============================================================
@@ -160,7 +164,7 @@ BASE_YEAR = df["year"].min()
 df["year_index"] = df["year"] - BASE_YEAR   # 0=2022, 1=2023, 2=2024, 3=2025
 
 # Month label for display
-MONTH_NAMES = {4: "Apr", 5: "May", 6: "Jun", 7: "Jul", 8: "Aug", 9: "Sep"}
+MONTH_NAMES = {3: "Mar", 4: "Apr", 5: "May", 6: "Jun", 7: "Jul", 8: "Aug", 9: "Sep"}
 df["month_label"] = df["month"].map(MONTH_NAMES)
 
 print("=" * 62)
@@ -176,10 +180,17 @@ print("\n── Season totals (calculated from game rows vs. confirmed) ──")
 for yr, ref in SEASON_TOTALS.items():
     calc_hd  = df.loc[df["year"] == yr, "hot_dogs"].sum()
     calc_att = df.loc[df["year"] == yr, "attendance"].sum()
-    hd_ok  = "✓" if calc_hd  == ref["hot_dogs"]  else f"⚠ expected {ref['hot_dogs']:,}"
-    att_ok = "✓" if calc_att == ref["attendance"] else f"⚠ expected {ref['attendance']:,}"
-    print(f"  {yr}: HD {calc_hd:>8,} {hd_ok}  |  Att {calc_att:>8,} {att_ok}"
-          f"  |  Wins {SEASON_WINS[yr]}")
+    if ref["games"] is None:
+        # Known incomplete raw data – show confirmed total and note partial coverage
+        hd_note  = f"(partial raw data; confirmed full-season: {ref['hot_dogs']:,})"
+        att_note = f"(partial; confirmed: {ref['attendance']:,})"
+        print(f"  {yr}: HD {calc_hd:>8,} {hd_note}")
+        print(f"        Att {calc_att:>7,} {att_note}  |  Wins {SEASON_WINS[yr]}")
+    else:
+        hd_ok  = "✓" if calc_hd  == ref["hot_dogs"]  else f"⚠ expected {ref['hot_dogs']:,}"
+        att_ok = "✓" if calc_att == ref["attendance"] else f"⚠ expected {ref['attendance']:,}"
+        print(f"  {yr}: HD {calc_hd:>8,} {hd_ok}  |  Att {calc_att:>8,} {att_ok}"
+              f"  |  Wins {SEASON_WINS[yr]}")
 
 # ============================================================
 # 4. EXPLORATORY ANALYSIS
@@ -341,19 +352,18 @@ print(f"\n  → Using Model {model_label} for 2026 predictions")
 # the actual home/away split will differ.
 
 games_2026 = [
-    "2026-04-07",   # ← verify against official schedule
-    "2026-04-21",
-    "2026-05-05",
-    "2026-05-19",
-    "2026-06-02",
-    "2026-06-16",
+    "2026-03-31",
+    "2026-04-07",
+    "2026-04-28",
+    "2026-05-12",
+    "2026-05-26",
+    "2026-06-09",
+    "2026-06-23",
     "2026-06-30",
-    "2026-07-14",
-    "2026-07-28",
+    "2026-07-21",
     "2026-08-11",
     "2026-08-25",
-    "2026-09-08",
-    "2026-09-22",
+    "2026-09-15",
 ]
 
 # Projected attendance per month: historical median across all seasons.
@@ -446,9 +456,10 @@ print(f"{'=' * 72}")
 
 print(f"\n── Historical Season Totals for Context ──")
 for yr, info in SEASON_TOTALS.items():
-    w = SEASON_WINS[yr]
+    w      = SEASON_WINS[yr]
+    g_str  = f"{info['games']} games" if info["games"] else "game count unknown"
     print(f"  {yr}: {info['hot_dogs']:>8,} HD  "
-          f"({info['games']} games, avg DPF {info['avg_dpf']:.2f}, {w} wins)")
+          f"({g_str}, avg DPF {info['avg_dpf']:.2f}, {w} wins)")
 print(f"  2026: {total_pred:>8,} HD  "
       f"({len(games_2026)} games, avg DPF {proj_dpf_2026:.2f} projected, "
       f"{PROJECTED_2026_WINS} wins projected)")
@@ -468,8 +479,6 @@ print(f"  • DPF trend: 1.17 (2022) → 2.03 (2025) → {proj_dpf_2026:.2f} pro
 print(f"  • July/Aug games outsell April games by ~60–80% on average.")
 print(f"  • 2025 Sept 23 single-game DPM: "
       f"{92896 / (97 + 172):.0f} dogs/min (highest pace on record).")
-print(f"\n[IMPORTANT] 2026 game dates are PLACEHOLDERS.")
-print(f"  → Update the games_2026 list in Section 6 with the official schedule.")
 print(f"  → Update SEASON_WINS[2025] in Section 1 with the confirmed 2025 win total.")
 print(f"  → Adjust PROJECTED_2026_WINS to match preseason expectations.")
 
